@@ -266,6 +266,7 @@ export default function Page() {
 					messages={messages}
 					onSend={sendMsg}
 					onCallStart={startCall}
+					onBack={() => setSelected(null)} // Add onBack handler
 				/>
 			</div>
 			{(callActive || incomingCall) && (

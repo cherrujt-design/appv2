@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import EmojiPicker from "./EmojiPicker";
-import { Smile, Paperclip, Mic, Send, MoreVertical, Search, Lock, Phone, Video, Trash2, Ban } from "lucide-react";
+import { Smile, Send, ArrowLeft, Gamepad2, Settings, Play, Volume2 } from "lucide-react";
 
 type Msg = { from: string; to: string; text: string; ts: number };
 
@@ -12,36 +12,20 @@ type Props = {
   messages: Msg[];
   onSend: (m: Msg) => void;
   onCallStart: (video: boolean) => void;
+  onBack?: () => void;
 };
 
-export default function ChatWindow({ me, friend, messages, onSend, onCallStart }: Props) {
+export default function ChatWindow({ me, friend, messages, onSend, onCallStart, onBack }: Props) {
   const [text, setText] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
-  const [recording, setRecording] = useState(false);
-  const [recordTime, setRecordTime] = useState(0);
-
   const boxRef = useRef<HTMLDivElement | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (boxRef.current) boxRef.current.scrollTop = boxRef.current.scrollHeight;
   }, [messages, friend]);
 
-  // Recording Timer
-  useEffect(() => {
-    let int: NodeJS.Timeout;
-    if (recording) {
-      int = setInterval(() => setRecordTime(s => s + 1), 1000);
-    } else {
-      setRecordTime(0);
-    }
-    return () => clearInterval(int);
-  }, [recording]);
-
   function send() {
-    if (!me || !friend) return alert('Select friend and sign in');
+    if (!me || !friend) return;
     const t = text.trim();
     if (!t) return;
     const msg = { from: me.email, to: friend.email, text: t, ts: Date.now() };
@@ -49,165 +33,152 @@ export default function ChatWindow({ me, friend, messages, onSend, onCallStart }
     setText("");
   }
 
-  function sendAudio() {
-    if (!me || !friend) return;
-    const msg = { from: me.email, to: friend.email, text: `🎤 Voice Message (0:0${recordTime})`, ts: Date.now() };
-    onSend(msg);
-    setRecording(false);
-  }
-
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    if (e.target.files && e.target.files[0]) {
-      if (!me || !friend) return;
-      const file = e.target.files[0];
-      const msg = { from: me.email, to: friend.email, text: `📄 ${file.name}`, ts: Date.now() };
-      onSend(msg);
-    }
-  }
-
   function addEmoji(e: string) { setText(s => s + e); }
 
-  // Dark Theme Colors
-  const darkBg = '#222222'; // Main chat area
-  const darkPanel = '#2b2b2b'; // Sidebar-like or headers
-  const darkText = '#e1e1e1';
-  const darkSubText = '#888';
-  const bubbleMe = '#005c4b';
-  const bubbleThem = '#363636';
-
-  if (!friend) return (
-    <div className="chat-panel" style={{ alignItems: 'center', justifyContent: 'center', background: darkBg, border: 'none' }}>
-      <div style={{ textAlign: 'center', color: darkSubText, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
-        {/* WhatsApp Icon */}
-        <div style={{ opacity: 0.3 }}>
-          <svg viewBox="0 0 33 33" width="80" height="80" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
-            <path d="M16.6 0C7.4 0 0 7.4 0 16.5c0 3 .8 5.9 2.3 8.4L.6 33l8.3-2.2c2.4 1.3 5.1 2 7.8 2 9.2 0 16.6-7.4 16.6-16.5S25.8 0 16.6 0zm0 29.8c-2.5 0-4.9-.7-7.1-1.9l-.5-.3-5.2 1.4 1.4-5.1-.3-.5C3.8 21.1 3.1 18.8 3.1 16.5c0-7.5 6-13.6 13.5-13.6 7.5 0 13.5 6.1 13.5 13.6 0 7.5-6.1 13.3-13.5 13.3z" />
-            <path d="M22.4 18.9c-.3-.2-1.9-1-2.2-1.1-.3-.1-.5-.2-.7.2-.2.3-.9 1.1-1.1 1.3-.2.2-.5.3-.8.1-1.6-.8-2.6-1.4-3.6-3.2-.3-.5 0-.8.2-1 .2-.2.4-.5.6-.7.2-.2.3-.4.4-.7s.1-.5 0-.7c-.1-.2-.6-1.6-.9-2.2-.2-.5-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4-.3.3-1.2 1.2-1.2 2.9s1.2 3.4 1.4 3.6c.2.3 2.4 3.7 5.8 5.1 2.3 1 3.2 1.1 4.4 1 .8-.1 1.9-.8 2.2-1.5.3-.8.3-1.4.2-1.5-.1-.2-.4-.3-.7-.5z" />
-          </svg>
-        </div>
-        <div>
-          <h2 style={{ fontWeight: 400, color: darkText, opacity: 0.8, marginBottom: 8 }}>WhatsApp for Windows</h2>
-          <div style={{ fontSize: 13, maxWidth: 360, lineHeight: 1.5 }}>
-            Send and receive messages without keeping your phone online.<br />
-            Use WhatsApp on up to 4 linked devices and 1 phone at the same time.
-          </div>
-        </div>
-        <div style={{ marginTop: 80, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, opacity: 0.6 }}>
-          <Lock size={12} /> End-to-end encrypted
-        </div>
-      </div>
-    </div>
-  );
+  if (!friend) return null;
 
   const convo = messages.filter(m => (m.from === me?.email && m.to === friend.email) || (m.from === friend.email && m.to === me?.email));
 
   return (
-    <div className="chat-panel" style={{ background: `url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')`, backgroundColor: '#0b141a' }}> {/* Dark doodle bg */}
+    <div className="chat-window" style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      backgroundImage: "url('https://images.unsplash.com/photo-1614730341194-75c60740a0fd?q=80&w=2874&auto=format&fit=crop')",
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      display: 'flex', flexDirection: 'column',
+      fontFamily: '"Outfit", sans-serif'
+    }}>
+      {/* Overlay for readability */}
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.2)', pointerEvents: 'none' }} />
 
       {/* Header */}
-      <div className="header" style={{ background: darkPanel, borderBottom: '1px solid rgba(255,255,255,0.05)', height: 60 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
-          <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#555', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 600 }}>
+      <div style={{
+        height: 80,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 30px',
+        background: 'linear-gradient(to bottom, rgba(0,0,0,0.4), transparent)',
+        zIndex: 10
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+          {/* Back Button */}
+          <button onClick={onBack} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}><ArrowLeft size={28} /></button>
+
+          {/* Avatar */}
+          <div style={{ width: 50, height: 50, borderRadius: '50%', background: '#5C4033', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 20, fontWeight: 600, border: '2px solid rgba(255,255,255,0.3)' }}>
             {friend.name[0].toUpperCase()}
           </div>
+
+          {/* Info */}
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ fontWeight: 500, color: darkText }}>{friend.name}</div>
-            <div style={{ fontSize: 12, color: darkSubText }}>last seen today at 12:00 PM</div>
+            <div style={{ color: 'white', fontWeight: 700, fontSize: 18 }}>{friend.name}</div>
+            <div style={{ color: '#67E8F9', fontSize: 14, fontWeight: 500 }}>Online</div>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 20, color: darkSubText, alignItems: 'center', position: 'relative' }}>
-          {showSearch ? (
-            <div style={{ background: '#202020', borderRadius: 6, display: 'flex', padding: 4, borderBottom: '1px solid #00a884' }}>
-              <input autoFocus onBlur={() => setShowSearch(false)} placeholder="Search..." style={{ background: 'transparent', border: 'none', outline: 'none', color: 'white', width: 100, fontSize: 13 }} />
-            </div>
-          ) : (
-            <>
-              <button className="icon-btn" onClick={() => onCallStart(true)} style={{ color: darkSubText }}><Video size={20} /></button>
-              <button className="icon-btn" onClick={() => onCallStart(false)} style={{ color: darkSubText }}><Phone size={20} /></button>
-              <div style={{ width: 1, height: 20, background: '#444' }} />
-              <button className="icon-btn" onClick={() => setShowSearch(true)} style={{ color: darkSubText }}><Search size={20} /></button>
-              <button className="icon-btn" onClick={() => setShowMenu(s => !s)} style={{ color: darkSubText }}><MoreVertical size={20} /></button>
 
-              {showMenu && (
-                <div style={{ position: 'absolute', top: 40, right: 0, width: 160, background: '#2b2b2b', boxShadow: '0 4px 20px rgba(0,0,0,0.5)', borderRadius: 6, padding: 6, zIndex: 100 }}>
-                  <div className="menu-item" style={{ display: 'flex', gap: 10, padding: 10, color: '#e1e1e1', cursor: 'pointer', fontSize: 13 }} onClick={() => alert('Contact Info')}>Contact Info</div>
-                  <div className="menu-item" style={{ display: 'flex', gap: 10, padding: 10, color: '#e1e1e1', cursor: 'pointer', fontSize: 13 }} onClick={() => alert('Select Messages')}>Select Messages</div>
-                  <div className="menu-item" style={{ display: 'flex', gap: 10, padding: 10, color: '#e1e1e1', cursor: 'pointer', fontSize: 13 }} onClick={() => alert('Close Chat')}>Close Chat</div>
-                  <div style={{ height: 1, background: '#444', margin: '4px 0' }}></div>
-                  <div className="menu-item" style={{ display: 'flex', gap: 10, padding: 10, color: '#ea0038', cursor: 'pointer', fontSize: 13 }} onClick={() => alert('Block')}>Block</div>
-                </div>
-              )}
-            </>
-          )}
+        {/* Settings Fab */}
+        <div style={{
+          width: 45, height: 45, borderRadius: '50%',
+          background: '#25D366', // WhatsApp-ish green from design
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
+          cursor: 'pointer'
+        }}>
+          <Settings size={24} color="white" />
         </div>
       </div>
 
-      {/* Messages */}
-      <div ref={boxRef} className="messages" style={{ padding: '20px 60px' }}>
-        {convo.map((m, i) => (
-          <div key={i} className={`message ${m.from === me?.email ? 'me' : 'them'}`}
+      {/* Messages Area */}
+      <div ref={boxRef} style={{ flex: 1, overflowY: 'auto', padding: '20px 40px', display: 'flex', flexDirection: 'column', gap: 15, zIndex: 10 }}>
+        {convo.map((m, i) => {
+          const isMe = m.from === me?.email;
+          return (
+            <div key={i} style={{
+              alignSelf: isMe ? 'flex-end' : 'flex-start',
+              maxWidth: '60%',
+              background: isMe ? 'rgba(103, 232, 249, 0.8)' : 'rgba(255, 255, 255, 0.2)', // Cyan for me, Glass for them
+              backdropFilter: 'blur(10px)',
+              padding: '12px 20px',
+              borderRadius: 20,
+              borderBottomRightRadius: isMe ? 4 : 20,
+              borderBottomLeftRadius: isMe ? 20 : 4,
+              color: isMe ? '#0ca678' : 'white',
+              fontWeight: 500,
+              boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+            }}>
+              {m.text}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Footer / Composer */}
+      <div style={{
+        height: 100,
+        background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 40px',
+        zIndex: 10
+      }}>
+        {/* Music Widget (Left) */}
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.15)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: 50,
+          padding: '10px 20px',
+          display: 'flex', alignItems: 'center', gap: 12,
+          color: 'white',
+          marginRight: 40
+        }}>
+          <div style={{ fontSize: 18 }}>🎵</div>
+          <div style={{ fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap' }}>Chill Lofi</div>
+          <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.3)' }} />
+          <Play size={16} fill="white" />
+          <Volume2 size={16} />
+        </div>
+
+        {/* Input Area (Center) */}
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 15, maxWidth: 800 }}>
+          {/* Game Icon */}
+          <div style={{ width: 45, height: 45, borderRadius: '50%', background: '#FFB800', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+            <Gamepad2 size={24} color="white" />
+          </div>
+
+          {/* Smiley */}
+          <div onClick={() => setShowEmoji(!showEmoji)} style={{ cursor: 'pointer', color: 'white', opacity: 0.8 }}>
+            <Smile size={30} />
+          </div>
+
+          {/* Text Input */}
+          <input
+            value={text}
+            onChange={e => setText(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && send()}
+            placeholder="Type a chill message..."
             style={{
-              background: m.from === me?.email ? bubbleMe : bubbleThem,
-              color: '#e1e1e1',
-              borderRadius: 8,
-              boxShadow: '0 1px 0.5px rgba(0,0,0,0.13)',
-              maxWidth: '65%'
+              flex: 1, background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 50,
+              padding: '15px 25px', color: 'white', fontSize: 16, outline: 'none',
+              backdropFilter: 'blur(5px)'
             }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-end' }}>
-              <span style={{ fontSize: 14.2, lineHeight: '19px' }}>{m.text}</span>
-              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', minWidth: 40, textAlign: 'right', marginBottom: -4 }}>
-                {new Date(m.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            </div>
-          </div>
-        ))}
+          />
+
+          {/* Send Button */}
+          <button onClick={send} style={{
+            width: 50, height: 50, borderRadius: '50%', background: '#8B5CF6', // Purple
+            border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', flexShrink: 0, boxShadow: '0 4px 15px rgba(139, 92, 246, 0.4)'
+          }}>
+            <Send size={24} color="white" />
+          </button>
+        </div>
       </div>
 
-      {/* Emoji Panel */}
+      {/* Emoji Picker Overlay */}
       {showEmoji && (
-        <div style={{ height: 300, background: darkPanel, borderTop: '1px solid #444' }}>
+        <div style={{ position: 'absolute', bottom: 110, left: 250, zIndex: 20 }}>
           <EmojiPicker onPick={addEmoji} />
         </div>
       )}
 
-      {/* Composer */}
-      <div className="composer" style={{ background: darkPanel, borderTop: 'none', padding: '10px 16px', gap: 16 }}>
-        <input type="file" ref={fileRef} style={{ display: 'none' }} onChange={handleFile} />
-
-        <div style={{ display: 'flex', gap: 16, color: darkSubText }}>
-          <button className="icon-btn" onClick={() => setShowEmoji(s => !s)} style={{ color: showEmoji ? '#00a884' : darkSubText }}><Smile size={24} /></button>
-          <button className="icon-btn" onClick={() => fileRef.current?.click()} style={{ color: darkSubText }}><Paperclip size={24} /></button>
-        </div>
-
-        <input
-          value={text}
-          onChange={e => setText(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && send()}
-          placeholder="Type a message"
-          style={{
-            flex: 1,
-            padding: '10px 12px',
-            borderRadius: 8,
-            border: 'none',
-            fontSize: 15,
-            outline: 'none',
-            background: '#3d3d3d',
-            color: darkText
-          }}
-        />
-
-        {text.trim() ? (
-          <button className="icon-btn" onClick={send} style={{ color: '#00a884' }}><Send size={24} /></button>
-        ) : (
-          <button className="icon-btn" onClick={() => {
-            if (recording) sendAudio();
-            else setRecording(true);
-          }} style={{ color: recording ? '#ea0038' : darkSubText, transition: 'all 0.2s' }}>
-            {recording ? <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 600 }}>0:0{recordTime} <Send size={24} /></div> : <Mic size={24} />}
-          </button>
-        )}
-      </div>
     </div>
   );
 }
