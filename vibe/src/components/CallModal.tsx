@@ -200,46 +200,68 @@ export default function CallModal({ friend, isVideo, onEnd, isIncoming, callId }
             display: 'flex', alignItems: 'center', justifyContent: 'center'
         }}>
             <div style={{
-                width: 800, height: 600, background: '#222', borderRadius: 16,
+                width: 900, height: 650, background: '#222', borderRadius: 16,
                 display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
                 position: 'relative'
             }}>
 
-                {/* Remote Video (Full Size) */}
-                <video ref={remoteVideoRef} autoPlay playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', background: '#000' }} />
+                {/* Main Video Area - SPLIT VIEW */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'row', background: '#000', position: 'relative' }}>
 
-                {/* Status Overlay */}
-                {!connected && (
-                    <div style={{ position: 'absolute', top: '40%', left: 0, right: 0, textAlign: 'center' }}>
-                        <div style={{ width: 100, height: 100, borderRadius: '50%', background: '#444', margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <User size={50} color="#fff" />
-                        </div>
-                        <h2 style={{ color: 'white', fontWeight: 500, margin: 0 }}>{friend.name}</h2>
-                        <p style={{ color: '#aaa', marginTop: 8 }}>{status}</p>
-                        {isIncoming && !connected && (
-                            <div style={{ marginTop: 20 }}>
-                                <button onClick={handleAnswer} style={{ background: '#00a884', color: 'white', border: 'none', padding: '10px 30px', borderRadius: 30, fontSize: 16, fontWeight: 600, cursor: 'pointer' }}>
-                                    Accept Call
-                                </button>
+                    {/* Remote Video (Left or Full) */}
+                    <div style={{
+                        flex: connected ? 1 : 1,
+                        position: 'relative',
+                        borderRight: connected ? '1px solid #333' : 'none',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}>
+                        <video ref={remoteVideoRef} autoPlay playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        {!connected && (
+                            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', zIndex: 10 }}>
+                                <div style={{ width: 100, height: 100, borderRadius: '50%', background: '#444', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <User size={50} color="#fff" />
+                                </div>
+                                <h2 style={{ color: 'white', fontWeight: 500, margin: 0 }}>{friend.name}</h2>
+                                <p style={{ color: '#aaa', marginTop: 8 }}>{status}</p>
+                                {isIncoming && !connected && (
+                                    <div style={{ marginTop: 20 }}>
+                                        <button onClick={handleAnswer} style={{ background: '#00a884', color: 'white', border: 'none', padding: '10px 30px', borderRadius: 30, fontSize: 16, fontWeight: 600, cursor: 'pointer' }}>Accept Call</button>
+                                    </div>
+                                )}
                             </div>
                         )}
+                        {connected && <div style={{ position: 'absolute', bottom: 10, left: 10, color: 'white', background: 'rgba(0,0,0,0.5)', padding: '2px 8px', borderRadius: 4, fontSize: 12 }}>That Person</div>}
                     </div>
-                )}
 
-                {/* Local Video (PIP) */}
-                <div style={{
-                    position: 'absolute', bottom: 100, right: 20, width: 160, height: 120,
-                    background: '#333', borderRadius: 8, overflow: 'hidden', boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
-                    border: '1px solid #444'
-                }}>
-                    <video ref={localVideoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    {/* Local Video (Right or Hidden/PIP if waiting) */}
+                    {/* We show Local Video SIDE BY SIDE when connected, or hidden/pip logic? 
+                Actually user wants to SEE both. So we always show local. 
+                If not connected, maybe we show local in background? 
+                Let's sticky to Split View only when connected for better UI.
+             */}
+                    {connected ? (
+                        <div style={{ flex: 1, position: 'relative', borderLeft: '1px solid #333' }}>
+                            <video ref={localVideoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <div style={{ position: 'absolute', bottom: 10, left: 10, color: 'white', background: 'rgba(0,0,0,0.5)', padding: '2px 8px', borderRadius: 4, fontSize: 12 }}>You</div>
+                        </div>
+                    ) : (
+                        /* PIP Style when Calling/Ringing so we can see ourselves while waiting */
+                        <div style={{
+                            position: 'absolute', bottom: 100, right: 20, width: 160, height: 120,
+                            background: '#333', borderRadius: 8, overflow: 'hidden', boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+                            border: '1px solid #444', zIndex: 20
+                        }}>
+                            <video ref={localVideoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        </div>
+                    )}
+
                 </div>
 
                 {/* Header */}
                 <div style={{
                     position: 'absolute', top: 0, left: 0, right: 0, padding: 20,
                     background: 'linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 50
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'white' }}>
                         <Lock size={14} /> <span style={{ fontSize: 13 }}>End-to-end encrypted</span>
@@ -249,8 +271,7 @@ export default function CallModal({ friend, isVideo, onEnd, isIncoming, callId }
 
                 {/* Footer Controls */}
                 <div style={{
-                    position: 'absolute', bottom: 0, left: 0, right: 0, height: 80,
-                    background: '#1c1c1c', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20
+                    height: 90, background: '#1c1c1c', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, zIndex: 50
                 }}>
                     <button
                         onClick={() => { setMicOn(!micOn); localStream.current?.getAudioTracks().forEach(t => t.enabled = !micOn); }}

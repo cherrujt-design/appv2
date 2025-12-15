@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import ChatWindow from "../components/ChatWindow";
 import CallModal from "../components/CallModal";
+import LandingPage from "../components/LandingPage";
 
 import { auth, db, googleProvider } from "../lib/firebase";
 import { signInWithPopup, signOut, onAuthStateChanged, User } from "firebase/auth";
