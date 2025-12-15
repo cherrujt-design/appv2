@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import { MoreVertical, Search, MessageSquarePlus, CircleDashed, Menu, MessageSquare, Phone, Star, Archive, Settings, UserCircle } from "lucide-react";
 
-type Friend = { email: string; name: string };
+type Friend = { email: string; name: string; status?: 'friend' | 'request' };
 
 type Props = {
   friends: Friend[];
   onAddFriend: (f: Friend) => void;
+  onAcceptRequest?: (f: Friend) => void;
+  onBlockRequest?: (f: Friend) => void;
   onSelectFriend: (f: Friend) => void;
   selected?: string | null;
   signedIn: boolean;
@@ -23,7 +25,7 @@ type Props = {
   resetSettings: () => void;
 };
 
-export default function Sidebar({ friends, onAddFriend, onSelectFriend, selected, signedIn, currentUser, onSignIn, onSignOut, theme, toggleTheme, customBg, customText, uiStyle, setCustomBg, setCustomText, setUiStyle, resetSettings }: Props) {
+export default function Sidebar({ friends, onAddFriend, onAcceptRequest, onBlockRequest, onSelectFriend, selected, signedIn, currentUser, onSignIn, onSignOut, theme, toggleTheme, customBg, customText, uiStyle, setCustomBg, setCustomText, setUiStyle, resetSettings }: Props) {
   const [email, setEmail] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
@@ -148,25 +150,45 @@ export default function Sidebar({ friends, onAddFriend, onSelectFriend, selected
 
             {/* List */}
             <div className="friends-list" style={{ background: 'transparent', overflowY: 'auto' }}>
-              {friends.map(f => (
-                <div key={f.email} className="friend" onClick={() => onSelectFriend(f)} style={{
-                  background: selected === f.email ? '#383838' : 'transparent',
-                  borderBottom: '1px solid #3b3b3b',
-                  padding: '10px 16px',
-                  borderRadius: 0
-                }}>
-                  <div className="avatar" style={{ width: 44, height: 44, background: '#555', color: '#e1e1e1' }}>{(f.name || f.email)[0].toUpperCase()}</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: 2 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <div style={{ fontWeight: 500, fontSize: 16, color: '#e1e1e1' }}>{f.name}</div>
-                      <div className="small" style={{ fontSize: 11, color: '#888' }}>09/12/2025</div>
+              {friends.map(f => {
+                if (f.status === 'request') {
+                  return (
+                    <div key={f.email} className="friend-request" style={{ padding: 15, borderBottom: '1px solid #3b3b3b', background: 'rgba(0,168,132,0.1)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                        <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#555', color: '#e1e1e1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>?</div>
+                        <div>
+                          <div style={{ color: '#e1e1e1', fontWeight: 600 }}>{f.name}</div>
+                          <div style={{ color: '#00a884', fontSize: 12 }}>Wants to correspond with you</div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 10 }}>
+                        <button onClick={() => onAcceptRequest?.(f)} style={{ flex: 1, padding: '6px 0', border: 'none', borderRadius: 4, background: '#00a884', color: 'white', cursor: 'pointer', fontWeight: 500 }}>Accept</button>
+                        <button onClick={() => onBlockRequest?.(f)} style={{ flex: 1, padding: '6px 0', border: '1px solid #ea0038', borderRadius: 4, background: 'transparent', color: '#ea0038', cursor: 'pointer', fontWeight: 500 }}>Block</button>
+                      </div>
                     </div>
-                    <div className="small" style={{ fontSize: 13, color: '#aaa', display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ color: '#53bdeb' }}>✓✓</span> Click to chat
+                  );
+                }
+
+                return (
+                  <div key={f.email} className="friend" onClick={() => onSelectFriend(f)} style={{
+                    background: selected === f.email ? '#383838' : 'transparent',
+                    borderBottom: '1px solid #3b3b3b',
+                    padding: '10px 16px',
+                    borderRadius: 0
+                  }}>
+                    <div className="avatar" style={{ width: 44, height: 44, background: '#555', color: '#e1e1e1' }}>{(f.name || f.email)[0].toUpperCase()}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: 2 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <div style={{ fontWeight: 500, fontSize: 16, color: '#e1e1e1' }}>{f.name}</div>
+                        <div className="small" style={{ fontSize: 11, color: '#888' }}>09/12/2025</div>
+                      </div>
+                      <div className="small" style={{ fontSize: 13, color: '#aaa', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ color: '#53bdeb' }}>✓✓</span> Click to chat
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </>
         )}

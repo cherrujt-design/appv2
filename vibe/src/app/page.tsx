@@ -5,7 +5,6 @@ import Sidebar from "../components/Sidebar";
 import ChatWindow from "../components/ChatWindow";
 import CallModal from "../components/CallModal";
 
-// Firebase
 import { auth, db, googleProvider } from "../lib/firebase";
 import { signInWithPopup, signOut, onAuthStateChanged, User } from "firebase/auth";
 import {
@@ -31,13 +30,14 @@ export default function Page() {
 	// Call State
 	const [callActive, setCallActive] = useState(false);
 	const [callVideo, setCallVideo] = useState(false);
+	const [callId, setCallId] = useState<string | null>(null);
+	const [incomingCall, setIncomingCall] = useState<any>(null);
 
 	// 1. Auth Listener
 	useEffect(() => {
 		const unsub = onAuthStateChanged(auth, async (u) => {
 			if (u) {
 				setUser(u);
-				// Ensure user exists in DB
 				await setDoc(doc(db, "users", u.uid), {
 					name: u.displayName,
 					email: u.email,
@@ -54,7 +54,7 @@ export default function Page() {
 		return () => unsub();
 	}, []);
 
-	// 2. Friends Listener (Contacts subcollection)
+	// 2. Friends Listener
 	useEffect(() => {
 		if (!user) return;
 		const q = collection(db, "users", user.uid, "contacts");
@@ -78,23 +78,10 @@ export default function Page() {
 		return () => unsub();
 	}, [user]);
 
-	// 3. Messages Listener (Global or specific)
-	// For simplicity, we listen to all messages where I am sender OR receiver
+	// 3. Messages Listener
 	useEffect(() => {
 		if (!user) return;
-
-		// Firestore OR queries are tricky. We'll listen to sent and received separately or use a composite ID.
-		// Simple approach: Listen to 'messages' collection ordered by ts.
-		// WARNING: In production, this needs composite index or specific filtering.
-		// We will just listen to ALL messages for this prototype and filter client side
-		// to avoid index setup complexity for the user right now (if permission allows).
-		// Actually, 'array-contains' is better if we store participants field.
-
-		const q = query(
-			collection(db, "messages"),
-			orderBy("ts", "asc")
-		);
-
+		const q = query(collection(db, "messages"), orderBy("ts", "asc"));
 		const unsub = onSnapshot(q, (snap) => {
 			const msgs: Msg[] = [];
 			snap.forEach(d => {
@@ -105,7 +92,31 @@ export default function Page() {
 			});
 			setMessages(msgs);
 		});
+		return () => unsub();
+	}, [user]);
 
+	// 4. Incoming Call Listener
+	useEffect(() => {
+		if (!user) return;
+		// Listen for calls offered TO me
+		const q = query(
+			collection(db, "calls"),
+			where("to", "==", user.email),
+			where("status", "==", "offer")
+		);
+		const unsub = onSnapshot(q, (snap) => {
+			if (!snap.empty) {
+				const doc = snap.docs[0];
+				const data = doc.data();
+				// Check if call is stale (older than 1 minute)
+				if (data.ts && (Date.now() - data.ts.toMillis()) > 60000) return;
+
+				setIncomingCall({ id: doc.id, ...data });
+				setCallId(doc.id);
+			} else {
+				setIncomingCall(null);
+			}
+		});
 		return () => unsub();
 	}, [user]);
 
@@ -133,12 +144,8 @@ export default function Page() {
 	function toggleTheme() { setTheme(t => t === 'light' ? 'dark' : 'light'); }
 
 	async function handleSignIn() {
-		try {
-			await signInWithPopup(auth, googleProvider);
-		} catch (e) {
-			console.error(e);
-			alert("Login failed");
-		}
+		try { await signInWithPopup(auth, googleProvider); }
+		catch (e) { console.error(e); alert("Login failed"); }
 	}
 
 	async function handleSignOut() { await signOut(auth); }
@@ -146,7 +153,6 @@ export default function Page() {
 	async function addFriend(f: Friend) {
 		if (!user) return;
 
-		// 1. Search for user by email
 		const q = query(collection(db, "users"), where("email", "==", f.email));
 		const snap = await getDocs(q);
 
@@ -158,7 +164,6 @@ export default function Page() {
 		const targetUser = snap.docs[0];
 		const targetData = targetUser.data();
 
-		// 2. Add to MY contacts immediately (optimistic friend adding)
 		await setDoc(doc(db, "users", user.uid, "contacts", f.email), {
 			name: targetData.name || f.email,
 			email: f.email,
@@ -166,7 +171,6 @@ export default function Page() {
 			uid: targetUser.id
 		});
 
-		// 3. Send REQUEST to THEM
 		await setDoc(doc(db, "users", targetUser.id, "requests", user.email!), {
 			name: user.displayName || user.email,
 			email: user.email,
@@ -179,17 +183,10 @@ export default function Page() {
 
 	async function acceptRequest(f: Friend) {
 		if (!user || !f.uid) return;
-		// Move from requests to contacts
 		await setDoc(doc(db, "users", user.uid, "contacts", f.email), {
-			name: f.name,
-			email: f.email,
-			photoURL: f.photoURL || "",
-			uid: f.uid
+			name: f.name, email: f.email, photoURL: f.photoURL || "", uid: f.uid
 		});
-		// Delete request
 		await deleteDoc(doc(db, "users", user.uid, "requests", f.email));
-		// Also ensure they have me in contacts (should be done by their addFriend, but good to ensure bi-directional)
-		// For now, assume single directional accept is enough to chat.
 	}
 
 	async function blockRequest(f: Friend) {
@@ -199,21 +196,27 @@ export default function Page() {
 
 	async function sendMsg(m: Msg) {
 		if (!user) return;
-		// Add participants array for easier querying in future
-		await addDoc(collection(db, "messages"), {
-			...m,
-			participants: [m.from, m.to]
+		await addDoc(collection(db, "messages"), { ...m, participants: [m.from, m.to] });
+	}
+
+	async function startCall(video: boolean) {
+		if (!user || !selected) return;
+
+		const callDoc = await addDoc(collection(db, "calls"), {
+			from: user.email,
+			to: selected,
+			status: "offer",
+			video: video,
+			ts: serverTimestamp()
 		});
-		// Optimistic update not needed as onSnapshot will catch it fast
+
+		setCallId(callDoc.id);
+		setCallActive(true);
+		setCallVideo(video);
 	}
 
 	const currentFriend = friends.find(f => f.email === selected) || null;
-
-	// Adapt user object for child components to match expected shape
 	const currentUser = user ? { name: user.displayName || user.email || 'User', email: user.email || '' } : null;
-
-	// Combine requests and friends for the sidebar, but we might pass them separately or handle in Sidebar
-	// For simplicity, we can pass a combined list if Sidebar handles 'status' check.
 	const allContacts = [...requests, ...friends];
 
 	return (
@@ -245,14 +248,22 @@ export default function Page() {
 					friend={currentFriend}
 					messages={messages}
 					onSend={sendMsg}
-					onCallStart={(video) => { setCallVideo(video); setCallActive(true); }}
+					onCallStart={startCall}
 				/>
 			</div>
-			{callActive && currentFriend && (
+			{(callActive || incomingCall) && (
 				<CallModal
-					friend={currentFriend}
-					isVideo={callVideo}
-					onEnd={() => setCallActive(false)}
+					friend={incomingCall ? { name: incomingCall.from, email: incomingCall.from } : currentFriend!}
+					isVideo={incomingCall ? incomingCall.video : callVideo}
+					isIncoming={!!incomingCall}
+					callId={callId!}
+					onEnd={async () => {
+						setCallActive(false);
+						setIncomingCall(null);
+						setCallId(null);
+						// Cleanup call doc
+						if (callId) await setDoc(doc(db, "calls", callId), { status: 'ended' }, { merge: true });
+					}}
 				/>
 			)}
 		</div>
