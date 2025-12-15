@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import ChatWindow from "../components/ChatWindow";
+import CallModal from "../components/CallModal";
 
 type Friend = { email: string; name: string };
 type Msg = { from: string; to: string; text: string; ts: number };
@@ -17,6 +17,10 @@ export default function Page() {
 	const [friends, setFriends] = useState<Friend[]>([]);
 	const [selected, setSelected] = useState<string | null>(null);
 	const [messages, setMessages] = useState<Msg[]>([]);
+
+	// Call State
+	const [callActive, setCallActive] = useState(false);
+	const [callVideo, setCallVideo] = useState(false);
 
 	useEffect(() => {
 		document.body.setAttribute('data-theme', theme);
@@ -65,7 +69,6 @@ export default function Page() {
 	function toggleTheme() { setTheme(t => t === 'light' ? 'dark' : 'light'); }
 
 	function handleSignIn() {
-		// Simulated Google sign-in: prompt for name/email
 		const name = prompt('Simulated Google Sign-in\nEnter your full name:');
 		if (!name) return;
 		const email = prompt('Enter your Google email:');
@@ -86,9 +89,7 @@ export default function Page() {
 	const currentFriend = friends.find(f => f.email === selected) || null;
 
 	return (
-		<div style={{ padding: 20 }}>
-			<Header user={user} onSignIn={handleSignIn} onSignOut={handleSignOut} theme={theme} toggleTheme={toggleTheme} />
-
+		<div style={{ padding: 0 }}>
 			<div className="app-root">
 				<Sidebar
 					friends={friends}
@@ -96,6 +97,9 @@ export default function Page() {
 					onSelectFriend={f => setSelected(f.email)}
 					selected={selected}
 					signedIn={!!user}
+					currentUser={user}
+					onSignIn={handleSignIn}
+					onSignOut={handleSignOut}
 					theme={theme}
 					toggleTheme={toggleTheme}
 					customBg={customBg}
@@ -106,9 +110,21 @@ export default function Page() {
 					setUiStyle={setUiStyle}
 					resetSettings={resetSettings}
 				/>
-				<ChatWindow me={user} friend={currentFriend} messages={messages} onSend={sendMsg} />
+				<ChatWindow
+					me={user}
+					friend={currentFriend}
+					messages={messages}
+					onSend={sendMsg}
+					onCallStart={(video) => { setCallVideo(video); setCallActive(true); }}
+				/>
 			</div>
+			{callActive && currentFriend && (
+				<CallModal
+					friend={currentFriend}
+					isVideo={callVideo}
+					onEnd={() => setCallActive(false)}
+				/>
+			)}
 		</div>
 	);
 }
-
