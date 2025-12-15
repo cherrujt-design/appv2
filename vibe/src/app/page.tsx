@@ -99,7 +99,6 @@ export default function Page() {
 	// 4. Incoming Call Listener
 	useEffect(() => {
 		if (!user) return;
-		// Listen for calls offered TO me
 		const q = query(
 			collection(db, "calls"),
 			where("to", "==", user.email),
@@ -109,7 +108,6 @@ export default function Page() {
 			if (!snap.empty) {
 				const doc = snap.docs[0];
 				const data = doc.data();
-				// Check if call is stale (older than 1 minute)
 				if (data.ts && (Date.now() - data.ts.toMillis()) > 60000) return;
 
 				setIncomingCall({ id: doc.id, ...data });
@@ -121,7 +119,6 @@ export default function Page() {
 		return () => unsub();
 	}, [user]);
 
-
 	useEffect(() => {
 		document.body.setAttribute('data-theme', theme);
 		document.body.setAttribute('data-ui', uiStyle || 'square');
@@ -132,7 +129,6 @@ export default function Page() {
 		try { localStorage.setItem('theme', theme); } catch (e) { }
 	}, [theme]);
 
-	// Theme Effects
 	useEffect(() => { if (customBg) document.body.style.setProperty('--custom-bg', customBg); else document.body.style.removeProperty('--custom-bg'); localStorage.setItem('vibe:setting:bg', customBg || ''); }, [customBg]);
 	useEffect(() => { if (customText) document.body.style.setProperty('--custom-text', customText); else document.body.style.removeProperty('--custom-text'); localStorage.setItem('vibe:setting:text', customText || ''); }, [customText]);
 	useEffect(() => { document.body.setAttribute('data-ui', uiStyle || 'square'); localStorage.setItem('vibe:setting:ui', uiStyle || 'square'); }, [uiStyle]);
@@ -220,6 +216,11 @@ export default function Page() {
 	const currentUser = user ? { name: user.displayName || user.email || 'User', email: user.email || '' } : null;
 	const allContacts = [...requests, ...friends];
 
+	// If not logged in, show Landing Page
+	if (!user) {
+		return <LandingPage onSignIn={handleSignIn} />;
+	}
+
 	return (
 		<div style={{ padding: 0 }}>
 			<div className="app-root">
@@ -262,7 +263,6 @@ export default function Page() {
 						setCallActive(false);
 						setIncomingCall(null);
 						setCallId(null);
-						// Cleanup call doc
 						if (callId) await setDoc(doc(db, "calls", callId), { status: 'ended' }, { merge: true });
 					}}
 				/>
