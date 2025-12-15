@@ -5,6 +5,7 @@ import Sidebar from "../components/Sidebar";
 import ChatWindow from "../components/ChatWindow";
 import CallModal from "../components/CallModal";
 import LandingPage from "../components/LandingPage";
+import Dashboard from "../components/Dashboard";
 
 import { auth, db, googleProvider } from "../lib/firebase";
 import { signInWithPopup, signOut, onAuthStateChanged, User } from "firebase/auth";
@@ -50,6 +51,7 @@ export default function Page() {
 				setFriends([]);
 				setRequests([]);
 				setMessages([]);
+				setSelected(null);
 			}
 		});
 		return () => unsub();
@@ -213,14 +215,27 @@ export default function Page() {
 	}
 
 	const currentFriend = friends.find(f => f.email === selected) || null;
-	const currentUser = user ? { name: user.displayName || user.email || 'User', email: user.email || '' } : null;
+	const currentUser = user ? { name: user.displayName || user.email || 'User', email: user.email || '', photoURL: user.photoURL || '' } : null;
 	const allContacts = [...requests, ...friends];
 
-	// If not logged in, show Landing Page
+	// 1. Not Logged In -> Landing Page
 	if (!user) {
 		return <LandingPage onSignIn={handleSignIn} />;
 	}
 
+	// 2. Logged In but No Chat Selected -> Dashboard
+	if (!selected) {
+		return (
+			<Dashboard
+				user={currentUser!}
+				friends={allContacts}
+				onSelectFriend={f => setSelected(f.email)}
+				onSignOut={handleSignOut}
+			/>
+		);
+	}
+
+	// 3. Chat Selected -> Chat Interface
 	return (
 		<div style={{ padding: 0 }}>
 			<div className="app-root">
