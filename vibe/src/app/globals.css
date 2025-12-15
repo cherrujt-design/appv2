@@ -1,0 +1,460 @@
+:root {
+  --bg-creamy: #f7f5f2;
+  --bg-image-url: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1950&q=80');
+  --panel-dark: #1f2937;
+  /* dark UI panels */
+  --panel-light: #ffffff;
+  --text-dark: #111827;
+  --text-light: #f3f4f6;
+  --accent: #2563eb;
+}
+
+html,
+body,
+#__next {
+  height: 100%;
+}
+
+body[data-theme='light'] {
+  background-image: linear-gradient(rgba(247, 245, 242, 0.55), rgba(247, 245, 242, 0.55)), var(--bg-image-url);
+  background-size: cover;
+  background-position: center;
+  color: var(--custom-text, var(--text-dark));
+}
+
+body[data-theme='dark'] {
+  background-image: linear-gradient(rgba(3, 7, 18, 0.6), rgba(3, 7, 18, 0.6)), var(--bg-image-url);
+  background-size: cover;
+  background-position: center;
+  color: var(--custom-text, var(--text-light));
+}
+
+/* If user picks a solid custom background color, override the image */
+body[style*="--custom-bg"] {
+  background-image: none !important;
+  background: var(--custom-bg) !important;
+}
+
+/* App layout */
+.app-root {
+  height: 100vh;
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.sidebar {
+  width: 280px;
+  border-radius: 12px;
+  padding: 12px;
+  box-sizing: border-box;
+  background-color: rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 12px rgba(16, 24, 40, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+body[data-theme='dark'] .sidebar {
+  background-color: rgba(8, 10, 14, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.friends-list {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.friend {
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.friend:hover {
+  opacity: 0.95
+}
+
+.friend .avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #ddd;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600
+}
+
+.chat-panel {
+  flex: 1;
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  background-color: rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 6px 18px rgba(2, 6, 23, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.25)
+}
+
+body[data-theme='dark'] .chat-panel {
+  background-color: rgba(8, 10, 14, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.03)
+}
+
+.messages {
+  flex: 1;
+  overflow: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px
+}
+
+.message {
+  max-width: 70%;
+  padding: 10px 12px;
+  border-radius: 12px;
+}
+
+.message.me {
+  margin-left: auto;
+  background: linear-gradient(90deg, var(--accent), #1e90ff);
+  color: white;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.10)
+}
+
+.message.them {
+  background: rgba(255, 255, 255, 0.45);
+  color: var(--text-dark);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+body[data-theme='dark'] .message.them {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-light);
+}
+
+.composer {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+  align-items: center
+}
+
+.composer textarea {
+  flex: 1;
+  resize: none;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: transparent;
+  color: inherit
+}
+
+.composer button {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--panel-dark);
+  color: var(--text-light);
+  border: none;
+  cursor: pointer
+}
+
+.small {
+  font-size: 12px;
+  opacity: 0.9
+}
+
+.control-row {
+  display: flex;
+  gap: 8px;
+  align-items: center
+}
+
+.icon-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  padding: 6px;
+  border-radius: 8px
+}
+
+.icon-btn:hover {
+  background: rgba(0, 0, 0, 0.04)
+}
+
+.settings-panel {
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.03)
+}
+
+body[data-theme='dark'] .settings-panel {
+  background: rgba(255, 255, 255, 0.02)
+}
+
+.toggle-switch {
+  width: 44px;
+  height: 24px;
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 999px;
+  border: none;
+  position: relative;
+  padding: 2px;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer
+}
+
+.toggle-switch .knob {
+  width: 18px;
+  height: 18px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(2, 6, 23, 0.2);
+  transition: transform 0.18s ease
+}
+
+.toggle-switch.on {
+  background: var(--accent)
+}
+
+.toggle-switch.on .knob {
+  transform: translateX(20px)
+}
+
+/* Settings overlay and modal */
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+  background: rgba(2, 6, 23, 0.28);
+  backdrop-filter: blur(6px);
+}
+
+body[data-theme='light'] .settings-overlay {
+  background: rgba(2, 6, 23, 0.08);
+}
+
+.settings-modal {
+  width: 360px;
+  max-width: 92%;
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 18px 40px rgba(2, 6, 23, 0.2);
+}
+
+.settings-modal .icon-btn {
+  padding: 4px
+}
+
+/* light/dark modal backgrounds */
+.settings-modal {
+  background: var(--panel-light);
+  color: var(--text-dark);
+}
+
+body[data-theme='dark'] .settings-modal {
+  background: #0b1116;
+  color: var(--text-light);
+}
+
+/* UI style variants */
+body[data-ui='rounded'] .sidebar,
+body[data-ui='rounded'] .chat-panel,
+body[data-ui='rounded'] .friend,
+body[data-ui='rounded'] .message,
+body[data-ui='rounded'] .composer textarea,
+body[data-ui='rounded'] .composer button,
+body[data-ui='rounded'] .settings-modal {
+  border-radius: 12px;
+}
+
+body[data-ui='square'] .sidebar,
+body[data-ui='square'] .chat-panel,
+body[data-ui='square'] .friend,
+body[data-ui='square'] .message,
+body[data-ui='square'] .composer textarea,
+body[data-ui='square'] .composer button,
+body[data-ui='square'] .settings-modal,
+body[data-ui='square'] .game-modal,
+body[data-ui='square'] button,
+body[data-ui='square'] .icon-btn,
+body[data-ui='square'] input,
+body[data-ui='square'] select,
+body[data-ui='square'] textarea,
+body[data-ui='square'] .game-btn,
+body[data-ui='square'] .game-grid button {
+  border-radius: 0px !important;
+}
+
+body[data-ui='compact'] .sidebar {
+  padding: 8px
+}
+
+body[data-ui='compact'] .chat-panel {
+  padding: 8px
+}
+
+body[data-ui='compact'] .friend {
+  padding: 6px
+}
+
+body[data-ui='compact'] .message {
+  padding: 6px 8px;
+}
+
+/* Ensure all interactive controls are rounded */
+button,
+.icon-btn,
+input,
+select,
+textarea,
+.composer button,
+input[type="color"] {
+  border-radius: 12px;
+}
+
+/* Smaller radius for color input knobs */
+input[type="color"] {
+  padding: 4px;
+  height: 34px;
+  width: 44px
+}
+
+
+/* Game controller button */
+.game-btn {
+  width: 38px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 10px
+}
+
+body[data-theme='dark'] .game-btn {
+  background: rgba(255, 255, 255, 0.02)
+}
+
+/* Games modal styling reusing settings overlay/modal classes but with wider layout */
+.game-grid {
+  display: grid;
+  gap: 8px
+}
+
+.game-modal .small.on {
+  background: rgba(0, 0, 0, 0.06)
+}
+
+body[data-theme='dark'] .game-modal .small.on {
+  background: rgba(255, 255, 255, 0.03)
+}
+
+/* Friendly card/grid styles for games */
+.game-grid button {
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  background-color: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+body[data-theme='dark'] .game-grid button {
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  background-color: rgba(255, 255, 255, 0.04)
+}
+
+/* Game overlay: blur the whole page behind the modal */
+.game-overlay {
+  background: rgba(2, 6, 23, 0.24);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Game modal: squarer and translucent */
+.game-modal {
+  border-radius: 6px;
+  background-color: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.12)
+}
+
+body[data-theme='dark'] .game-modal {
+  background-color: rgba(8, 10, 14, 0.36);
+  border: 1px solid rgba(255, 255, 255, 0.04)
+}
+
+
+
+/* Sketch / Anime UI Style */
+body[data-ui='sketch'] {
+  font-family: 'Comic Sans MS', 'Chalkboard SE', 'Comic Neue', sans-serif;
+}
+
+body[data-ui='sketch'] .sidebar,
+body[data-ui='sketch'] .chat-panel,
+body[data-ui='sketch'] .message,
+body[data-ui='sketch'] .settings-modal,
+body[data-ui='sketch'] .game-modal {
+  border: 2px solid #000 !important;
+  border-radius: 8px 255px 15px 255px / 255px 15px 225px 15px !important;
+  /* Sketchy radius */
+  box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 0.85) !important;
+  /* Hard shadow */
+}
+
+body[data-ui='sketch'] .message.me {
+  background: var(--accent);
+  color: white;
+  border: 2px solid #000 !important;
+  box-shadow: 2px 2px 0px 0px rgba(0, 0, 0, 0.9) !important;
+}
+
+body[data-ui='sketch'] .message.them {
+  background: white;
+  color: black;
+  border: 2px solid #000 !important;
+  box-shadow: 2px 2px 0px 0px rgba(0, 0, 0, 0.9) !important;
+}
+
+body[data-ui='sketch'] button,
+body[data-ui='sketch'] input,
+body[data-ui='sketch'] select,
+body[data-ui='sketch'] textarea,
+body[data-ui='sketch'] .game-btn,
+body[data-ui='sketch'] .game-grid button {
+  border: 2px solid #000 !important;
+  border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px !important;
+  box-shadow: 2px 2px 0px 0px rgba(0, 0, 0, 1) !important;
+}
+
+body[data-ui='sketch'] .friend:hover {
+  border: 1px solid #000;
+  box-shadow: 2px 2px 0px 0px #000;
+  background: white;
+}
