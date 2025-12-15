@@ -9,10 +9,10 @@ import CallModal from "../components/CallModal";
 import { auth, db, googleProvider } from "../lib/firebase";
 import { signInWithPopup, signOut, onAuthStateChanged, User } from "firebase/auth";
 import {
-	collection, query, where, onSnapshot, addDoc, setDoc, doc, getDocs, orderBy, serverTimestamp
+	collection, query, where, onSnapshot, addDoc, setDoc, doc, getDocs, orderBy, serverTimestamp, deleteDoc
 } from "firebase/firestore";
 
-type Friend = { email: string; name: string; uid?: string; photoURL?: string };
+type Friend = { email: string; name: string; uid?: string; photoURL?: string; status?: 'friend' | 'request' };
 type Msg = { from: string; to: string; text: string; ts: number };
 
 export default function Page() {
@@ -24,6 +24,7 @@ export default function Page() {
 	// Real Data State
 	const [user, setUser] = useState<User | null>(null);
 	const [friends, setFriends] = useState<Friend[]>([]);
+	const [requests, setRequests] = useState<Friend[]>([]);
 	const [selected, setSelected] = useState<string | null>(null);
 	const [messages, setMessages] = useState<Msg[]>([]);
 
@@ -46,6 +47,7 @@ export default function Page() {
 			} else {
 				setUser(null);
 				setFriends([]);
+				setRequests([]);
 				setMessages([]);
 			}
 		});
@@ -58,8 +60,20 @@ export default function Page() {
 		const q = collection(db, "users", user.uid, "contacts");
 		const unsub = onSnapshot(q, (snap) => {
 			const list: Friend[] = [];
-			snap.forEach(d => list.push(d.data() as Friend));
+			snap.forEach(d => list.push({ ...d.data(), status: 'friend' } as Friend));
 			setFriends(list);
+		});
+		return () => unsub();
+	}, [user]);
+
+	// 2.5 Requests Listener
+	useEffect(() => {
+		if (!user) return;
+		const q = collection(db, "users", user.uid, "requests");
+		const unsub = onSnapshot(q, (snap) => {
+			const list: Friend[] = [];
+			snap.forEach(d => list.push({ ...d.data(), status: 'request' } as Friend));
+			setRequests(list);
 		});
 		return () => unsub();
 	}, [user]);
@@ -70,9 +84,9 @@ export default function Page() {
 		if (!user) return;
 
 		// Firestore OR queries are tricky. We'll listen to sent and received separately or use a composite ID.
-		// Simple approach: Listen to 'messages' collection ordered by ts. 
+		// Simple approach: Listen to 'messages' collection ordered by ts.
 		// WARNING: In production, this needs composite index or specific filtering.
-		// We will just listen to ALL messages for this prototype and filter client side 
+		// We will just listen to ALL messages for this prototype and filter client side
 		// to avoid index setup complexity for the user right now (if permission allows).
 		// Actually, 'array-contains' is better if we store participants field.
 
@@ -131,7 +145,8 @@ export default function Page() {
 
 	async function addFriend(f: Friend) {
 		if (!user) return;
-		// Search for user by email
+
+		// 1. Search for user by email
 		const q = query(collection(db, "users"), where("email", "==", f.email));
 		const snap = await getDocs(q);
 
@@ -140,15 +155,46 @@ export default function Page() {
 			return;
 		}
 
-		const friendData = snap.docs[0].data();
+		const targetUser = snap.docs[0];
+		const targetData = targetUser.data();
 
-		// Add to my contacts
+		// 2. Add to MY contacts immediately (optimistic friend adding)
 		await setDoc(doc(db, "users", user.uid, "contacts", f.email), {
-			name: friendData.name || f.email,
+			name: targetData.name || f.email,
 			email: f.email,
-			photoURL: friendData.photoURL || "",
-			uid: snap.docs[0].id
+			photoURL: targetData.photoURL || "",
+			uid: targetUser.id
 		});
+
+		// 3. Send REQUEST to THEM
+		await setDoc(doc(db, "users", targetUser.id, "requests", user.email!), {
+			name: user.displayName || user.email,
+			email: user.email,
+			photoURL: user.photoURL || "",
+			uid: user.uid
+		});
+
+		alert(`Added ${f.email} and sent them a connection request!`);
+	}
+
+	async function acceptRequest(f: Friend) {
+		if (!user || !f.uid) return;
+		// Move from requests to contacts
+		await setDoc(doc(db, "users", user.uid, "contacts", f.email), {
+			name: f.name,
+			email: f.email,
+			photoURL: f.photoURL || "",
+			uid: f.uid
+		});
+		// Delete request
+		await deleteDoc(doc(db, "users", user.uid, "requests", f.email));
+		// Also ensure they have me in contacts (should be done by their addFriend, but good to ensure bi-directional)
+		// For now, assume single directional accept is enough to chat.
+	}
+
+	async function blockRequest(f: Friend) {
+		if (!user) return;
+		await deleteDoc(doc(db, "users", user.uid, "requests", f.email));
 	}
 
 	async function sendMsg(m: Msg) {
@@ -166,13 +212,19 @@ export default function Page() {
 	// Adapt user object for child components to match expected shape
 	const currentUser = user ? { name: user.displayName || user.email || 'User', email: user.email || '' } : null;
 
+	// Combine requests and friends for the sidebar, but we might pass them separately or handle in Sidebar
+	// For simplicity, we can pass a combined list if Sidebar handles 'status' check.
+	const allContacts = [...requests, ...friends];
+
 	return (
 		<div style={{ padding: 0 }}>
 			<div className="app-root">
 				<Sidebar
-					friends={friends}
+					friends={allContacts}
 					onAddFriend={addFriend}
-					onSelectFriend={f => setSelected(f.email)}
+					onAcceptRequest={acceptRequest}
+					onBlockRequest={blockRequest}
+					onSelectFriend={f => f.status === 'friend' ? setSelected(f.email) : null}
 					selected={selected}
 					signedIn={!!user}
 					currentUser={currentUser}

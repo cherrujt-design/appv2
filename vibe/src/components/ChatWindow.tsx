@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import EmojiPicker from "./EmojiPicker";
-import { Smile, Paperclip, Mic, Send, MoreVertical, Search, Lock, Phone, Video } from "lucide-react";
+import { Smile, Paperclip, Mic, Send, MoreVertical, Search, Lock, Phone, Video, Trash2, Ban } from "lucide-react";
 
 type Msg = { from: string; to: string; text: string; ts: number };
 
@@ -17,11 +17,28 @@ type Props = {
 export default function ChatWindow({ me, friend, messages, onSend, onCallStart }: Props) {
   const [text, setText] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [recordTime, setRecordTime] = useState(0);
+
   const boxRef = useRef<HTMLDivElement | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (boxRef.current) boxRef.current.scrollTop = boxRef.current.scrollHeight;
   }, [messages, friend]);
+
+  // Recording Timer
+  useEffect(() => {
+    let int: NodeJS.Timeout;
+    if (recording) {
+      int = setInterval(() => setRecordTime(s => s + 1), 1000);
+    } else {
+      setRecordTime(0);
+    }
+    return () => clearInterval(int);
+  }, [recording]);
 
   function send() {
     if (!me || !friend) return alert('Select friend and sign in');
@@ -30,6 +47,22 @@ export default function ChatWindow({ me, friend, messages, onSend, onCallStart }
     const msg = { from: me.email, to: friend.email, text: t, ts: Date.now() };
     onSend(msg);
     setText("");
+  }
+
+  function sendAudio() {
+    if (!me || !friend) return;
+    const msg = { from: me.email, to: friend.email, text: `🎤 Voice Message (0:0${recordTime})`, ts: Date.now() };
+    onSend(msg);
+    setRecording(false);
+  }
+
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    if (e.target.files && e.target.files[0]) {
+      if (!me || !friend) return;
+      const file = e.target.files[0];
+      const msg = { from: me.email, to: friend.email, text: `📄 ${file.name}`, ts: Date.now() };
+      onSend(msg);
+    }
   }
 
   function addEmoji(e: string) { setText(s => s + e); }
@@ -82,11 +115,30 @@ export default function ChatWindow({ me, friend, messages, onSend, onCallStart }
             <div style={{ fontSize: 12, color: darkSubText }}>last seen today at 12:00 PM</div>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 20, color: darkSubText }}>
-          <button className="icon-btn" onClick={() => onCallStart(true)} style={{ color: darkSubText }}><Video size={20} /></button>
-          <button className="icon-btn" onClick={() => onCallStart(false)} style={{ color: darkSubText }}><Phone size={20} /></button>
-          <div style={{ width: 1, background: '#444' }} />
-          <Search size={20} />
+        <div style={{ display: 'flex', gap: 20, color: darkSubText, alignItems: 'center', position: 'relative' }}>
+          {showSearch ? (
+            <div style={{ background: '#202020', borderRadius: 6, display: 'flex', padding: 4, borderBottom: '1px solid #00a884' }}>
+              <input autoFocus onBlur={() => setShowSearch(false)} placeholder="Search..." style={{ background: 'transparent', border: 'none', outline: 'none', color: 'white', width: 100, fontSize: 13 }} />
+            </div>
+          ) : (
+            <>
+              <button className="icon-btn" onClick={() => onCallStart(true)} style={{ color: darkSubText }}><Video size={20} /></button>
+              <button className="icon-btn" onClick={() => onCallStart(false)} style={{ color: darkSubText }}><Phone size={20} /></button>
+              <div style={{ width: 1, height: 20, background: '#444' }} />
+              <button className="icon-btn" onClick={() => setShowSearch(true)} style={{ color: darkSubText }}><Search size={20} /></button>
+              <button className="icon-btn" onClick={() => setShowMenu(s => !s)} style={{ color: darkSubText }}><MoreVertical size={20} /></button>
+
+              {showMenu && (
+                <div style={{ position: 'absolute', top: 40, right: 0, width: 160, background: '#2b2b2b', boxShadow: '0 4px 20px rgba(0,0,0,0.5)', borderRadius: 6, padding: 6, zIndex: 100 }}>
+                  <div className="menu-item" style={{ display: 'flex', gap: 10, padding: 10, color: '#e1e1e1', cursor: 'pointer', fontSize: 13 }} onClick={() => alert('Contact Info')}>Contact Info</div>
+                  <div className="menu-item" style={{ display: 'flex', gap: 10, padding: 10, color: '#e1e1e1', cursor: 'pointer', fontSize: 13 }} onClick={() => alert('Select Messages')}>Select Messages</div>
+                  <div className="menu-item" style={{ display: 'flex', gap: 10, padding: 10, color: '#e1e1e1', cursor: 'pointer', fontSize: 13 }} onClick={() => alert('Close Chat')}>Close Chat</div>
+                  <div style={{ height: 1, background: '#444', margin: '4px 0' }}></div>
+                  <div className="menu-item" style={{ display: 'flex', gap: 10, padding: 10, color: '#ea0038', cursor: 'pointer', fontSize: 13 }} onClick={() => alert('Block')}>Block</div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
 
@@ -108,7 +160,6 @@ export default function ChatWindow({ me, friend, messages, onSend, onCallStart }
                 {new Date(m.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </span>
             </div>
-            {/* Tail Simulation could go here */}
           </div>
         ))}
       </div>
@@ -122,9 +173,11 @@ export default function ChatWindow({ me, friend, messages, onSend, onCallStart }
 
       {/* Composer */}
       <div className="composer" style={{ background: darkPanel, borderTop: 'none', padding: '10px 16px', gap: 16 }}>
+        <input type="file" ref={fileRef} style={{ display: 'none' }} onChange={handleFile} />
+
         <div style={{ display: 'flex', gap: 16, color: darkSubText }}>
-          <button className="icon-btn" onClick={() => setShowEmoji(s => !s)} style={{ color: darkSubText }}><Smile size={24} /></button>
-          <button className="icon-btn" style={{ color: darkSubText }}><Paperclip size={24} /></button>
+          <button className="icon-btn" onClick={() => setShowEmoji(s => !s)} style={{ color: showEmoji ? '#00a884' : darkSubText }}><Smile size={24} /></button>
+          <button className="icon-btn" onClick={() => fileRef.current?.click()} style={{ color: darkSubText }}><Paperclip size={24} /></button>
         </div>
 
         <input
@@ -147,7 +200,12 @@ export default function ChatWindow({ me, friend, messages, onSend, onCallStart }
         {text.trim() ? (
           <button className="icon-btn" onClick={send} style={{ color: '#00a884' }}><Send size={24} /></button>
         ) : (
-          <button className="icon-btn" style={{ color: darkSubText }}><Mic size={24} /></button>
+          <button className="icon-btn" onClick={() => {
+            if (recording) sendAudio();
+            else setRecording(true);
+          }} style={{ color: recording ? '#ea0038' : darkSubText, transition: 'all 0.2s' }}>
+            {recording ? <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 600 }}>0:0{recordTime} <Send size={24} /></div> : <Mic size={24} />}
+          </button>
         )}
       </div>
     </div>
